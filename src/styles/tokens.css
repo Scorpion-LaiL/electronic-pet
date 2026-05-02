@@ -1,0 +1,21 @@
+:root {
+  --bg-top: #efe4c8;
+  --bg-bottom: #d9eadf;
+  --shell: #f8f1df;
+  --shell-strong: #ead39f;
+  --screen: #243c36;
+  --screen-glow: #375e53;
+  --ink: #2f2820;
+  --muted: #6d6256;
+  --line: rgba(47, 40, 32, 0.12);
+  --good: #7db66d;
+  --normal: #f3c86f;
+  --warn: #f08c4a;
+  --critical: #dc5d4d;
+  --card: rgba(255, 250, 240, 0.86);
+  --shadow: 0 22px 55px rgba(84, 61, 35, 0.18);
+  --radius-xl: 28px;
+  --radius-lg: 18px;
+  --radius-md: 12px;
+  --radius-pill: 999px;
+}
