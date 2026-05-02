@@ -18,6 +18,8 @@ export const OFFLINE_CAP_MINUTES = 24 * 60;
 export const CRITICAL_AFTER_MINUTES = 90;
 export const DEATH_AFTER_MINUTES = 180;
 export const SLEEP_AUTO_WAKE_MINUTES = 90;
+export const CARE_ACTION_COOLDOWN_MINUTES = 30;
+export const MAX_CONSECUTIVE_CARE_ACTIONS = 2;
 
 export const STORAGE_KEY = 'ai-coding-pet-save';
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;

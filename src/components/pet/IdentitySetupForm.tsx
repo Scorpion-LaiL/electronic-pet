@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PET_SPECIES_OPTIONS } from '../../domain/pet/pet-species';
 import type { PetGender, PetSpecies } from '../../types/pet';
 
 type IdentitySetupFormProps = {
@@ -17,31 +18,32 @@ export function IdentitySetupForm({ onSubmit }: IdentitySetupFormProps) {
         <h1>给你的新宠物一个名字</h1>
         <p>
           首版先用轻量身份设定开始，不把第一次见面做成复杂表单。
-          你只需要给它一个名字，选它是小猫还是小狗，再决定它想被怎样介绍。
+          你只需要给它一个名字，挑一只你最喜欢的小动物，再决定它想被怎样介绍。
         </p>
       </div>
 
       <div className="field">
         <span>宠物类型</span>
         <div className="species-grid">
-          <button
-            className={species === 'cat' ? 'species-card is-active' : 'species-card'}
-            onClick={() => setSpecies('cat')}
-            type="button"
-          >
-            <span className="species-icon">=^.^=</span>
-            <strong>小猫</strong>
-            <small>更像安静又灵巧的像素精灵</small>
-          </button>
-          <button
-            className={species === 'dog' ? 'species-card is-active' : 'species-card'}
-            onClick={() => setSpecies('dog')}
-            type="button"
-          >
-            <span className="species-icon">Uo･ｪ･oU</span>
-            <strong>小狗</strong>
-            <small>更像热情又爱跑动的像素伙伴</small>
-          </button>
+          {PET_SPECIES_OPTIONS.map((option) => (
+            <button
+              className={species === option.key ? 'species-card is-active' : 'species-card'}
+              onClick={() => setSpecies(option.key)}
+              type="button"
+              key={option.key}
+            >
+              <span className={`species-preview species-preview--${option.key}`} aria-hidden="true">
+                <img
+                  className="species-preview__image"
+                  src={option.spritePath}
+                  alt=""
+                  draggable={false}
+                />
+              </span>
+              <strong>{option.label}</strong>
+              <small>{option.previewCopy}</small>
+            </button>
+          ))}
         </div>
       </div>
 

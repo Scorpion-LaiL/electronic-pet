@@ -1,5 +1,5 @@
 export type PetGender = 'boy' | 'girl' | 'unknown';
-export type PetSpecies = 'cat' | 'dog';
+export type PetSpecies = 'cat' | 'dog' | 'pig' | 'fox' | 'turtle';
 
 export type PetStage = 'baby' | 'child' | 'adult';
 
@@ -31,6 +31,13 @@ export type PetStats = {
   health: number;
 };
 
+export type CareAction = 'feed' | 'play' | 'clean' | 'rest';
+
+export type CareActionRecord = {
+  action: CareAction;
+  at: number;
+};
+
 export type PetRuntimeState = {
   identity: PetIdentity;
   stage: PetStage;
@@ -45,6 +52,7 @@ export type PetRuntimeState = {
   enteredCriticalAt: number | null;
   careScore: number;
   careQuality: CareQuality;
+  careActionHistory: CareActionRecord[];
   isAlive: boolean;
 };
 
@@ -59,10 +67,7 @@ export type PetMemorialRecord = {
 };
 
 export type PetAction =
-  | 'feed'
-  | 'play'
-  | 'clean'
-  | 'rest'
+  | CareAction
   | 'wake'
   | 'revive';
 

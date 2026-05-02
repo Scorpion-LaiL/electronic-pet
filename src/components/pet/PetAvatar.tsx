@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { PetRuntimeState } from '../../types/pet';
+import { getPetSpeciesMeta } from '../../domain/pet/pet-species';
+import type { PetRuntimeState, PetSpecies } from '../../types/pet';
 import type { RecentAction } from '../../types/ui';
 
 type SceneMode = 'sleep' | 'critical' | 'playful' | 'tired' | 'idle';
 type ScenePeriod = 'dawn' | 'day' | 'sunset' | 'night';
+type AmbientBehavior = 'tail-wag' | 'ear-twitch' | 'snout-bob' | 'head-peek' | null;
 type MotionFrame = {
   x: number;
   y: number;
@@ -37,6 +39,84 @@ const BASE_MOTION_PATHS: Record<SceneMode, MotionFrame[]> = {
     { x: 53, y: 58, facing: 'right' },
     { x: 50, y: 58, facing: 'left' }
   ]
+};
+
+const SPECIES_MOTION_PATHS: Record<
+  PetSpecies,
+  Partial<Record<SceneMode, MotionFrame[]>>
+> = {
+  cat: {
+    idle: [
+      { x: 36, y: 58, facing: 'right' },
+      { x: 48, y: 56, facing: 'right' },
+      { x: 62, y: 58, facing: 'left' }
+    ],
+    playful: [
+      { x: 28, y: 60, facing: 'right' },
+      { x: 42, y: 48, facing: 'right' },
+      { x: 60, y: 58, facing: 'left' },
+      { x: 44, y: 50, facing: 'left' }
+    ]
+  },
+  dog: {
+    idle: [
+      { x: 32, y: 60, facing: 'right' },
+      { x: 46, y: 58, facing: 'right' },
+      { x: 58, y: 60, facing: 'left' }
+    ],
+    playful: [
+      { x: 22, y: 60, facing: 'right' },
+      { x: 40, y: 50, facing: 'right' },
+      { x: 64, y: 58, facing: 'left' },
+      { x: 48, y: 48, facing: 'left' }
+    ]
+  },
+  pig: {
+    idle: [
+      { x: 40, y: 61, facing: 'right' },
+      { x: 50, y: 59, facing: 'right' },
+      { x: 58, y: 61, facing: 'left' }
+    ],
+    playful: [
+      { x: 34, y: 60, facing: 'right' },
+      { x: 48, y: 52, facing: 'right' },
+      { x: 62, y: 60, facing: 'left' }
+    ],
+    tired: [
+      { x: 44, y: 64, facing: 'right' },
+      { x: 52, y: 65, facing: 'left' }
+    ]
+  },
+  fox: {
+    idle: [
+      { x: 34, y: 58, facing: 'right' },
+      { x: 48, y: 56, facing: 'right' },
+      { x: 64, y: 58, facing: 'left' }
+    ],
+    playful: [
+      { x: 20, y: 58, facing: 'right' },
+      { x: 38, y: 46, facing: 'right' },
+      { x: 68, y: 56, facing: 'left' },
+      { x: 46, y: 45, facing: 'left' }
+    ]
+  },
+  turtle: {
+    idle: [
+      { x: 42, y: 66, facing: 'right' },
+      { x: 50, y: 65, facing: 'right' },
+      { x: 58, y: 66, facing: 'left' }
+    ],
+    playful: [
+      { x: 38, y: 65, facing: 'right' },
+      { x: 52, y: 62, facing: 'right' },
+      { x: 62, y: 65, facing: 'left' }
+    ],
+    tired: [
+      { x: 46, y: 67, facing: 'right' },
+      { x: 52, y: 67, facing: 'left' }
+    ],
+    sleep: [{ x: 50, y: 69, facing: 'right' }]
+  }
 };
 
 const ACTION_MOTION_PATHS: Record<'feed' | 'play' | 'clean' | 'rest', MotionFrame[]> = {
@@ -88,26 +168,59 @@ function getMoodBubble(pet: PetRuntimeState): string {
   }
 
   if (pet.isSleeping) {
-    return '呼...呼...现在正在按时长慢慢恢复体力。';
+    switch (pet.identity.species) {
+      case 'cat':
+        return '呼噜呼噜，猫咪正缩成一团补觉。';
+      case 'dog':
+        return '它睡得很沉，耳朵都软趴下来了。';
+      case 'pig':
+        return '小猪打着呼噜，今天的睡姿也很圆。';
+      case 'fox':
+        return '小狐狸把尾巴裹在身边，睡得很轻。';
+      case 'turtle':
+        return '小乌龟缩进舒服角落，慢慢恢复体力。';
+    }
   }
 
   if (pet.stats.mood >= 75 && pet.stats.energy >= 55) {
-    return '好耶，今天想在房间里跑一圈。';
+    switch (pet.identity.species) {
+      case 'cat':
+        return '今天很想追着光点扑来扑去。';
+      case 'dog':
+        return '尾巴摇得很厉害，想立刻陪你玩。';
+      case 'pig':
+        return '今天心情超好，想哼哼着转两圈。';
+      case 'fox':
+        return '它眼睛亮亮的，像准备偷偷撒欢。';
+      case 'turtle':
+        return '虽然步子慢，但它今天特别有精神。';
+    }
   }
 
   if (pet.stats.hunger <= 30) {
-    return '肚子在咕咕叫，我想吃东西。';
+    return pet.identity.species === 'turtle' ? '小肚子空了，想啃点嫩叶。' : '肚子在咕咕叫，我想吃东西。';
   }
 
   if (pet.stats.cleanliness <= 30) {
-    return '想洗个舒服的澡，再继续玩。';
+    return pet.identity.species === 'fox' ? '尾巴有点乱了，想先梳顺再继续玩。' : '想洗个舒服的澡，再继续玩。';
   }
 
   if (pet.stats.energy <= 30) {
-    return '我先慢慢走，等会儿可能要睡了。';
+    return pet.identity.species === 'pig' ? '我先慢慢挪一会儿，等下就想趴着睡。' : '我先慢慢走，等会儿可能要睡了。';
   }
 
-  return '陪陪我吧，我会自己在这边转一转。';
+  switch (pet.identity.species) {
+    case 'cat':
+      return '陪陪我吧，我会假装漫不经心地蹭过来。';
+    case 'dog':
+      return '你在旁边就好，我会自己晃着尾巴待着。';
+    case 'pig':
+      return '我会在这里哼哼两声，等你回来看看我。';
+    case 'fox':
+      return '我先安静守着这块地，偶尔偷偷看你一眼。';
+    case 'turtle':
+      return '我会慢慢待在这里，别急，我一直都在。';
+  }
 }
 
 function getScenePeriod(hour: number): ScenePeriod {
@@ -165,6 +278,70 @@ function getSceneLabel(scene: SceneMode, period: ScenePeriod): string {
   return `${periodLabelMap[period]} · ${sceneLabelMap[scene]}`;
 }
 
+function getMotionFrames(species: PetSpecies, scene: SceneMode, activeAction: 'feed' | 'play' | 'clean' | 'rest' | null) {
+  if (activeAction) {
+    return ACTION_MOTION_PATHS[activeAction];
+  }
+
+  return SPECIES_MOTION_PATHS[species][scene] ?? BASE_MOTION_PATHS[scene];
+}
+
+function getSceneInterval(species: PetSpecies, scene: SceneMode, activeAction: 'feed' | 'play' | 'clean' | 'rest' | null) {
+  if (activeAction) {
+    if (species === 'turtle') {
+      return ACTION_INTERVAL_MS[activeAction] + 220;
+    }
+
+    if (species === 'fox' && activeAction === 'play') {
+      return 620;
+    }
+
+    return ACTION_INTERVAL_MS[activeAction];
+  }
+
+  if (species === 'turtle') {
+    return scene === 'critical' ? 620 : SCENE_INTERVAL_MS[scene] + 700;
+  }
+
+  if (species === 'fox' && scene === 'playful') {
+    return 920;
+  }
+
+  if (species === 'pig' && scene === 'tired') {
+    return 3000;
+  }
+
+  return SCENE_INTERVAL_MS[scene];
+}
+
+function getAmbientBehavior(species: PetSpecies): Exclude<AmbientBehavior, null> {
+  switch (species) {
+    case 'cat':
+    case 'dog':
+    case 'fox':
+      return 'tail-wag';
+    case 'pig':
+      return 'ear-twitch';
+    case 'turtle':
+      return 'head-peek';
+  }
+}
+
+function getAmbientDelayMs(species: PetSpecies): number {
+  switch (species) {
+    case 'cat':
+      return 5600;
+    case 'dog':
+      return 4300;
+    case 'pig':
+      return 6200;
+    case 'fox':
+      return 5000;
+    case 'turtle':
+      return 7200;
+  }
+}
+
 function getActionLabel(action: 'feed' | 'play' | 'clean' | 'rest') {
   switch (action) {
     case 'feed':
@@ -178,24 +355,38 @@ function getActionLabel(action: 'feed' | 'play' | 'clean' | 'rest') {
   }
 }
 
+function getStageSpriteLabel(stage: PetRuntimeState['stage']): string {
+  switch (stage) {
+    case 'baby':
+      return '幼崽体型';
+    case 'child':
+      return '成长期';
+    case 'adult':
+      return '成熟体';
+  }
+}
+
 function getSceneProp(
+  pet: PetRuntimeState,
   scene: SceneMode,
   activeAction: 'feed' | 'play' | 'clean' | 'rest' | null
 ) {
+  const speciesMeta = getPetSpeciesMeta(pet.identity.species);
+
   if (activeAction === 'feed') {
-    return { className: 'scene-prop--bowl', label: '像素食盆' };
+    return { className: speciesMeta.feedPropClass, label: speciesMeta.feedPropLabel };
   }
 
   if (activeAction === 'play') {
-    return { className: 'scene-prop--ball', label: '像素玩具球' };
+    return { className: speciesMeta.playPropClass, label: speciesMeta.playPropLabel };
   }
 
   if (activeAction === 'clean') {
-    return { className: 'scene-prop--bath', label: '泡泡浴盆' };
+    return { className: speciesMeta.cleanPropClass, label: speciesMeta.cleanPropLabel };
   }
 
   if (activeAction === 'rest' || scene === 'sleep') {
-    return { className: 'scene-prop--bed', label: '软绵绵小床' };
+    return { className: speciesMeta.restPropClass, label: speciesMeta.restPropLabel };
   }
 
   if (scene === 'critical') {
@@ -218,8 +409,10 @@ export function PetAvatar({ pet, recentAction }: PetAvatarProps) {
   const currentHour = new Date().getHours();
   const period = getScenePeriod(currentHour);
   const scene = getSceneMode(pet);
+  const speciesMeta = getPetSpeciesMeta(pet.identity.species);
   const [frameIndex, setFrameIndex] = useState(0);
   const [activeAction, setActiveAction] = useState<'feed' | 'play' | 'clean' | 'rest' | null>(null);
+  const [ambientBehavior, setAmbientBehavior] = useState<AmbientBehavior>(null);
 
   useEffect(() => {
     if (
@@ -242,17 +435,44 @@ export function PetAvatar({ pet, recentAction }: PetAvatarProps) {
     return undefined;
   }, [recentAction]);
 
-  const motionFrames = useMemo(() => {
-    if (activeAction) {
-      return ACTION_MOTION_PATHS[activeAction];
+  useEffect(() => {
+    if (activeAction || scene === 'critical' || scene === 'sleep') {
+      setAmbientBehavior(null);
+      return undefined;
     }
 
-    return BASE_MOTION_PATHS[scene];
-  }, [activeAction, scene]);
+    const ambient = getAmbientBehavior(pet.identity.species);
+    const delay = getAmbientDelayMs(pet.identity.species);
+    let timeoutId = 0;
+    let clearId = 0;
 
-  const currentInterval = activeAction
-    ? ACTION_INTERVAL_MS[activeAction]
-    : SCENE_INTERVAL_MS[scene];
+    const schedule = () => {
+      timeoutId = window.setTimeout(() => {
+        setAmbientBehavior(ambient);
+        clearId = window.setTimeout(() => {
+          setAmbientBehavior(null);
+          schedule();
+        }, pet.identity.species === 'turtle' ? 1600 : 1300);
+      }, delay);
+    };
+
+    schedule();
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.clearTimeout(clearId);
+    };
+  }, [activeAction, pet.identity.species, scene]);
+
+  const motionFrames = useMemo(
+    () => getMotionFrames(pet.identity.species, scene, activeAction),
+    [activeAction, pet.identity.species, scene]
+  );
+
+  const currentInterval = useMemo(
+    () => getSceneInterval(pet.identity.species, scene, activeAction),
+    [activeAction, pet.identity.species, scene]
+  );
 
   useEffect(() => {
     setFrameIndex(0);
@@ -267,7 +487,7 @@ export function PetAvatar({ pet, recentAction }: PetAvatarProps) {
   }, [currentInterval, motionFrames.length]);
 
   const currentFrame = motionFrames[frameIndex] ?? motionFrames[0];
-  const sceneProp = getSceneProp(scene, activeAction);
+  const sceneProp = getSceneProp(pet, scene, activeAction);
 
   return (
     <section
@@ -279,8 +499,9 @@ export function PetAvatar({ pet, recentAction }: PetAvatarProps) {
         {getSceneLabel(scene, period)}
         {activeAction ? ` · ${getActionLabel(activeAction)}` : ''}
       </div>
+      <div className={`growth-chip growth-chip--${pet.stage}`}>{getStageSpriteLabel(pet.stage)}</div>
 
-      <div className="pet-scene" aria-label="宠物像素场景">
+      <div className={`pet-scene pet-scene--${pet.identity.species}`} aria-label="宠物像素场景">
         <div className={`scene-celestial scene-celestial--${period}`} aria-hidden="true" />
         <div className="scene-cloud scene-cloud--1" aria-hidden="true" />
         <div className="scene-cloud scene-cloud--2" aria-hidden="true" />
@@ -291,7 +512,7 @@ export function PetAvatar({ pet, recentAction }: PetAvatarProps) {
         <div className={`scene-prop ${sceneProp.className}`} aria-label={sceneProp.label} />
 
         {activeAction === 'feed' ? (
-          <div className="action-effect action-effect--feed" aria-hidden="true">
+          <div className={`action-effect action-effect--feed action-effect--${pet.identity.species}`} aria-hidden="true">
             <span />
             <span />
             <span />
@@ -299,13 +520,13 @@ export function PetAvatar({ pet, recentAction }: PetAvatarProps) {
         ) : null}
 
         {activeAction === 'play' ? (
-          <div className="action-effect action-effect--play" aria-hidden="true">
+          <div className={`action-effect action-effect--play action-effect--${pet.identity.species}`} aria-hidden="true">
             <span />
           </div>
         ) : null}
 
         {activeAction === 'clean' ? (
-          <div className="action-effect action-effect--clean" aria-hidden="true">
+          <div className={`action-effect action-effect--clean action-effect--${pet.identity.species}`} aria-hidden="true">
             <span />
             <span />
             <span />
@@ -314,7 +535,7 @@ export function PetAvatar({ pet, recentAction }: PetAvatarProps) {
         ) : null}
 
         {activeAction === 'rest' || scene === 'sleep' ? (
-          <div className="action-effect action-effect--rest" aria-hidden="true">
+          <div className={`action-effect action-effect--rest action-effect--${pet.identity.species}`} aria-hidden="true">
             <span>Z</span>
             <span>Z</span>
             <span>Z</span>
@@ -334,31 +555,25 @@ export function PetAvatar({ pet, recentAction }: PetAvatarProps) {
             }`}
           >
             <div
-              className={`pixel-pet pixel-pet--${pet.stage} pixel-pet--${pet.identity.species} ${
-                currentFrame.facing === 'left' ? 'is-flipped' : ''
+              className={`pet-sprite pet-sprite--${pet.stage} pet-sprite--${pet.identity.species} ${
+                ambientBehavior ? `pet-sprite--ambient-${ambientBehavior}` : ''
               }`}
             >
-              <span className="pixel-pet__part pixel-pet__tail" />
-              <span className="pixel-pet__part pixel-pet__body" />
-              <span className="pixel-pet__part pixel-pet__chest" />
-              <span className="pixel-pet__part pixel-pet__head" />
-              <span className="pixel-pet__part pixel-pet__ear pixel-pet__ear--front" />
-              <span className="pixel-pet__part pixel-pet__ear pixel-pet__ear--back" />
-              <span className="pixel-pet__part pixel-pet__muzzle" />
-              <span className="pixel-pet__part pixel-pet__nose" />
-              <span className="pixel-pet__part pixel-pet__eye" />
-              <span className="pixel-pet__part pixel-pet__leg pixel-pet__leg--front" />
-              <span className="pixel-pet__part pixel-pet__leg pixel-pet__leg--back" />
-              <span className="pixel-pet__part pixel-pet__paw pixel-pet__paw--front" />
-              <span className="pixel-pet__part pixel-pet__paw pixel-pet__paw--back" />
-              <span className="pixel-pet__part pixel-pet__whisker pixel-pet__whisker--top" />
-              <span className="pixel-pet__part pixel-pet__whisker pixel-pet__whisker--mid" />
-              <span className="pixel-pet__part pixel-pet__whisker pixel-pet__whisker--bottom" />
+              <span className="pet-sprite__shadow" aria-hidden="true" />
+              <span className={currentFrame.facing === 'left' ? 'pet-sprite__art is-flipped' : 'pet-sprite__art'}>
+                <img
+                  className="pet-sprite__image"
+                  src={speciesMeta.spritePath}
+                  alt={`${speciesMeta.label}桌面形象`}
+                  draggable={false}
+                />
+                <span className="pet-sprite__stage-accent" aria-hidden="true" />
+              </span>
             </div>
           </div>
         </div>
 
-        <div className="scene-ground" aria-hidden="true" />
+        <div className={`scene-ground scene-ground--${pet.identity.species}`} aria-hidden="true" />
       </div>
 
       <div className="pet-bubble">{getMoodBubble(pet)}</div>
