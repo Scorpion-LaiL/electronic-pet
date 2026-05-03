@@ -5,6 +5,7 @@ import type { CareAction, PetRuntimeState } from '../../types/pet';
 type ActionControlsProps = {
   pet: PetRuntimeState;
   onAction: (action: 'feed' | 'play' | 'clean' | 'rest' | 'wake') => void;
+  variant?: 'panel' | 'desktop-compact' | 'desktop-floating';
 };
 
 function getCooldownLabel(action: CareAction, remainingMs: number): string {
@@ -22,7 +23,11 @@ function getCooldownLabel(action: CareAction, remainingMs: number): string {
   }
 }
 
-export function ActionControls({ pet, onAction }: ActionControlsProps) {
+export function ActionControls({
+  pet,
+  onAction,
+  variant = 'panel'
+}: ActionControlsProps) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -51,52 +56,75 @@ export function ActionControls({ pet, onAction }: ActionControlsProps) {
 
   const firstCoolingAction = actionStates.find((item) => item.isCoolingDown);
 
+  const buttons = (
+    <div className={`actions-grid ${variant === 'desktop-compact' ? 'actions-grid--compact' : ''}`}>
+      <button
+        className="toy-button"
+        onClick={() => onAction('feed')}
+        disabled={!pet.isAlive || actionStates[0]?.isCoolingDown}
+      >
+        {actionStates[0]?.isCoolingDown
+          ? getCooldownLabel('feed', actionStates[0].cooldownRemainingMs)
+          : '喂食'}
+      </button>
+      <button
+        className="toy-button"
+        onClick={() => onAction('play')}
+        disabled={!pet.isAlive || actionStates[1]?.isCoolingDown}
+      >
+        {actionStates[1]?.isCoolingDown
+          ? getCooldownLabel('play', actionStates[1].cooldownRemainingMs)
+          : '玩耍'}
+      </button>
+      <button
+        className="toy-button"
+        onClick={() => onAction('clean')}
+        disabled={!pet.isAlive || actionStates[2]?.isCoolingDown}
+      >
+        {actionStates[2]?.isCoolingDown
+          ? getCooldownLabel('clean', actionStates[2].cooldownRemainingMs)
+          : '清洁'}
+      </button>
+      <button
+        className="toy-button toy-button--accent"
+        onClick={() => onAction(pet.isSleeping ? 'wake' : 'rest')}
+        disabled={!pet.isAlive || (!pet.isSleeping && actionStates[3]?.isCoolingDown)}
+      >
+        {pet.isSleeping
+          ? '叫醒'
+          : actionStates[3]?.isCoolingDown
+            ? getCooldownLabel('rest', actionStates[3].cooldownRemainingMs)
+            : '休息'}
+      </button>
+    </div>
+  );
+
+  if (variant === 'desktop-compact') {
+    return (
+      <section className="desktop-action-bar">
+        {buttons}
+        <div className="action-hint">
+          {pet.isSleeping
+            ? '睡觉中，只能叫醒。'
+            : firstCoolingAction
+              ? `${getCooldownLabel(firstCoolingAction.action, firstCoolingAction.cooldownRemainingMs)} 冷却中。`
+              : '点击动作就能照顾它。'}
+        </div>
+      </section>
+    );
+  }
+
+  if (variant === 'desktop-floating') {
+    return <section className="desktop-action-orbit">{buttons}</section>;
+  }
+
   return (
     <section className="panel">
       <div className="panel-heading">
         <h3>照顾动作</h3>
         <p>每次只要花几十秒，它就会记住你的照顾。</p>
       </div>
-      <div className="actions-grid">
-        <button
-          className="toy-button"
-          onClick={() => onAction('feed')}
-          disabled={!pet.isAlive || actionStates[0]?.isCoolingDown}
-        >
-          {actionStates[0]?.isCoolingDown
-            ? getCooldownLabel('feed', actionStates[0].cooldownRemainingMs)
-            : '喂食'}
-        </button>
-        <button
-          className="toy-button"
-          onClick={() => onAction('play')}
-          disabled={!pet.isAlive || actionStates[1]?.isCoolingDown}
-        >
-          {actionStates[1]?.isCoolingDown
-            ? getCooldownLabel('play', actionStates[1].cooldownRemainingMs)
-            : '玩耍'}
-        </button>
-        <button
-          className="toy-button"
-          onClick={() => onAction('clean')}
-          disabled={!pet.isAlive || actionStates[2]?.isCoolingDown}
-        >
-          {actionStates[2]?.isCoolingDown
-            ? getCooldownLabel('clean', actionStates[2].cooldownRemainingMs)
-            : '清洁'}
-        </button>
-        <button
-          className="toy-button toy-button--accent"
-          onClick={() => onAction(pet.isSleeping ? 'wake' : 'rest')}
-          disabled={!pet.isAlive || (!pet.isSleeping && actionStates[3]?.isCoolingDown)}
-        >
-          {pet.isSleeping
-            ? '叫醒'
-            : actionStates[3]?.isCoolingDown
-              ? getCooldownLabel('rest', actionStates[3].cooldownRemainingMs)
-              : '休息'}
-        </button>
-      </div>
+      {buttons}
       <div className="action-hint">
         {pet.isSleeping
           ? '它正在睡觉，其他动作会先被拦下。'

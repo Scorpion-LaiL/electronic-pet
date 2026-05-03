@@ -1,11 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { DesktopCompanionShell } from '../components/desktop/DesktopCompanionShell';
 import { getPetSpeciesMeta } from '../domain/pet/pet-species';
+import { getDesktopBridge } from '../desktop/window/window-bridge';
 import { ActionControls } from '../components/controls/ActionControls';
 import { MessagePanel } from '../components/layout/MessagePanel';
 import { OverlayCard } from '../components/overlays/OverlayCard';
 import { IdentitySetupForm } from '../components/pet/IdentitySetupForm';
 import { PetAvatar } from '../components/pet/PetAvatar';
 import { StatusBar } from '../components/status/StatusBar';
+import { useDesktopPet } from '../hooks/use-desktop-pet';
 import { useGameLoop } from '../hooks/use-game-loop';
 import { useGameStore } from '../store/game-store';
 import type { PetRuntimeState } from '../types/pet';
@@ -168,11 +171,55 @@ function getPrimaryNeedTag(pet: PetRuntimeState): string {
 
 export function App() {
   const { state, actions } = useGameStore();
+  const desktopBridge = useMemo(() => getDesktopBridge(), []);
+  const isDesktopShellMode = Boolean(desktopBridge);
   const [showRecreateConfirm, setShowRecreateConfirm] = useState(false);
-  const [desktopPanelOpen, setDesktopPanelOpen] = useState(true);
+  const [desktopPanelOpen, setDesktopPanelOpen] = useState(() => !isDesktopShellMode);
   const [desktopPanelTab, setDesktopPanelTab] = useState<DesktopPanelTab>('care');
+  const overlayOpen =
+    Boolean(state.overlay.offlineSummary) ||
+    Boolean(state.overlay.growthNotice) ||
+    showRecreateConfirm;
+  const desktopWindowMode = overlayOpen ? 'overlay' : desktopPanelOpen ? 'panel' : 'pet';
 
   useGameLoop(state.screen === 'main' && Boolean(state.pet?.isAlive), actions.advanceTime);
+
+  const desktopPet = useDesktopPet({
+    enabled: isDesktopShellMode && state.screen === 'main' && Boolean(state.pet?.isAlive),
+    windowMode: desktopWindowMode,
+    pet: state.pet,
+    onAction: actions.performAction,
+    onTogglePanel: () => setDesktopPanelOpen((current) => !current)
+  });
+
+  useEffect(() => {
+    if (!desktopBridge || state.screen === 'main') {
+      return undefined;
+    }
+
+    let cancelled = false;
+    const preset =
+      state.screen === 'identity-setup'
+        ? { width: 820, height: 760 }
+        : { width: 820, height: 700 };
+
+    void desktopBridge.getMetrics().then((metrics) => {
+      if (cancelled) {
+        return;
+      }
+
+      void desktopBridge.updateWindow({
+        width: preset.width,
+        height: preset.height,
+        x: Math.round((metrics.screenWidth - preset.width) / 2),
+        y: Math.round((metrics.screenHeight - preset.height) / 2)
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [desktopBridge, state.screen]);
 
   const stats = useMemo(() => {
     if (!state.pet) {
@@ -258,6 +305,72 @@ export function App() {
           </button>
         </section>
       </main>
+    );
+  }
+
+  if (isDesktopShellMode) {
+    return (
+      <>
+        <DesktopCompanionShell
+          pet={state.pet}
+          recentAction={state.recentAction}
+          runtime={desktopPet.runtime}
+          panelOpen={desktopPanelOpen}
+          onTogglePanel={() => setDesktopPanelOpen((current) => !current)}
+          onAction={actions.performAction}
+          onInteractiveRegionsChange={desktopPet.setInteractiveRegions}
+          onStartDragging={desktopPet.startDragging}
+          overlayOpen={overlayOpen}
+        />
+
+        {state.overlay.offlineSummary ? (
+          <OverlayCard
+            title="离线结算"
+            actionLabel="继续照顾它"
+            onClose={actions.dismissOfflineSummary}
+            description={
+              <div>
+                {state.overlay.offlineSummary.lines.map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
+              </div>
+            }
+          />
+        ) : null}
+
+        {state.overlay.growthNotice ? (
+          <OverlayCard
+            title="成长啦"
+            actionLabel="太好了"
+            onClose={actions.dismissGrowthNotice}
+            description={
+              <p>
+                {state.pet.identity.name} 从 {getStageLabel(state.overlay.growthNotice.from)}
+                成长到了 {getStageLabel(state.overlay.growthNotice.to)}。
+              </p>
+            }
+          />
+        ) : null}
+
+        {showRecreateConfirm ? (
+          <OverlayCard
+            title="重新创建宠物"
+            actionLabel="确认重新创建"
+            secondaryActionLabel="先继续照顾"
+            onSecondaryAction={() => setShowRecreateConfirm(false)}
+            onClose={() => {
+              setShowRecreateConfirm(false);
+              actions.recreatePet();
+            }}
+            description={
+              <div>
+                <p>这会结束当前这只宠物的进行中旅程，并回到创建新宠物的页面。</p>
+                <p>当前养成进度会被替换，但不会被记为死亡纪念记录。</p>
+              </div>
+            }
+          />
+        ) : null}
+      </>
     );
   }
 
