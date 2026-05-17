@@ -1,3 +1,4 @@
+import { getDesktopBridge } from '../desktop/window/window-bridge';
 import { STORAGE_KEY } from '../domain/pet/pet-constants';
 import { createEmptySave, normalizeSaveData } from '../domain/save/save-schema';
 import type { SaveData } from '../types/save';
@@ -11,6 +12,16 @@ function getStorage(): Storage | null {
 }
 
 export function loadSaveData(): SaveData {
+  const desktopBridge = getDesktopBridge();
+
+  if (desktopBridge) {
+    const desktopSave = normalizeSaveData(desktopBridge.readSaveData());
+
+    if (desktopSave) {
+      return desktopSave;
+    }
+  }
+
   const storage = getStorage();
 
   if (!storage) {
@@ -32,6 +43,12 @@ export function loadSaveData(): SaveData {
 }
 
 export function persistSaveData(saveData: SaveData): void {
+  const desktopBridge = getDesktopBridge();
+
+  if (desktopBridge) {
+    desktopBridge.writeSaveData(saveData);
+  }
+
   const storage = getStorage();
 
   if (!storage) {
@@ -42,6 +59,12 @@ export function persistSaveData(saveData: SaveData): void {
 }
 
 export function clearSaveData(): void {
+  const desktopBridge = getDesktopBridge();
+
+  if (desktopBridge) {
+    desktopBridge.writeSaveData(createEmptySave());
+  }
+
   const storage = getStorage();
 
   storage?.removeItem(STORAGE_KEY);

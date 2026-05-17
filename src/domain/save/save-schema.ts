@@ -1,7 +1,31 @@
 import { SAVE_VERSION } from '../pet/pet-constants';
 import { createNewPet } from '../pet/pet-model';
+import { isPetSpecies } from '../pet/pet-species';
 import type { SaveData } from '../../types/save';
-import type { PetGender, PetRuntimeState } from '../../types/pet';
+import type { CareActionRecord, PetGender, PetRuntimeState } from '../../types/pet';
+
+function normalizeCareActionHistory(raw: unknown): CareActionRecord[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  return raw
+    .filter((entry): entry is CareActionRecord => {
+      if (!entry || typeof entry !== 'object') {
+        return false;
+      }
+
+      const record = entry as Partial<CareActionRecord>;
+      return (
+        typeof record.at === 'number' &&
+        (record.action === 'feed' ||
+          record.action === 'play' ||
+          record.action === 'clean' ||
+          record.action === 'rest')
+      );
+    })
+    .slice(-8);
+}
 
 function normalizeCurrentPet(raw: unknown): PetRuntimeState | null {
   if (!raw || typeof raw !== 'object') {
@@ -24,7 +48,7 @@ function normalizeCurrentPet(raw: unknown): PetRuntimeState | null {
         identity.gender === 'boy' || identity.gender === 'girl' || identity.gender === 'unknown'
           ? identity.gender
           : 'unknown',
-      species: identity.species === 'dog' ? 'dog' : 'cat',
+      species: isPetSpecies(identity.species) ? identity.species : 'cat',
       createdAt: typeof identity.createdAt === 'number' ? identity.createdAt : Date.now()
     },
     stage: pet.stage === 'child' || pet.stage === 'adult' ? pet.stage : 'baby',
@@ -58,6 +82,7 @@ function normalizeCurrentPet(raw: unknown): PetRuntimeState | null {
       pet.careQuality === 'poor'
         ? pet.careQuality
         : 'normal',
+    careActionHistory: normalizeCareActionHistory(pet.careActionHistory),
     isAlive: pet.isAlive !== false
   };
 }

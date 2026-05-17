@@ -19,7 +19,7 @@ export function OverlayCard({
 }: OverlayCardProps) {
   return (
     <div className="overlay-backdrop">
-      <div className="overlay-card">
+      <div className="overlay-card" data-desktop-interactive="true">
         <h3>{title}</h3>
         <div className="overlay-copy">{description}</div>
         <div className="overlay-actions">

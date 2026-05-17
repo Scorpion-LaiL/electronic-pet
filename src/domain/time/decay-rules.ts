@@ -8,23 +8,23 @@ import type { PetRuntimeState, PetStats } from '../../types/pet';
 export const ONLINE_TICK_INTERVAL_MS = ONLINE_TICK_MS;
 
 const ONLINE_DECAY_PER_MINUTE = {
-  hunger: 0.4,
-  mood: 0.2,
-  cleanliness: 0.15,
-  energy: 2 / 18
+  hunger: 0.24,
+  mood: 0.12,
+  cleanliness: 0.09,
+  energy: 0.07
 };
 
 function applyHealthShift(stats: PetStats, minutes: number): number {
   const warningStats = Object.values(stats).filter((value) => value <= 30).length;
   const dangerStats = Object.values(stats).filter((value) => value <= 15).length;
-  const healthLoss = warningStats * 0.12 * minutes + dangerStats * 0.06 * minutes;
+  const healthLoss = warningStats * 0.08 * minutes + dangerStats * 0.04 * minutes;
   const healthRecovery =
     warningStats === 0 &&
     stats.hunger >= 60 &&
     stats.mood >= 60 &&
     stats.cleanliness >= 60 &&
     stats.energy >= 55
-      ? 0.08 * minutes
+      ? 0.06 * minutes
       : 0;
 
   return healthRecovery - healthLoss;
@@ -71,6 +71,6 @@ export function applyOnlineDecay(
     sleepStartedAt: shouldWake ? null : pet.sleepStartedAt,
     sleepEndsAt: shouldWake ? null : pet.sleepEndsAt,
     lastUpdatedAt: now,
-    careScore: Math.max(0, pet.careScore - elapsedMinutes * 0.04)
+    careScore: Math.max(0, pet.careScore - elapsedMinutes * 0.025)
   };
 }

@@ -1,5 +1,8 @@
 node_modules/
 dist/
+dist-electron/
+.desktop-pet-logs/
+.desktop-pet-pids
 *.tsbuildinfo
 vite.config.js
 vite.config.d.ts

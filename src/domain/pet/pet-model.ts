@@ -73,6 +73,7 @@ export function createNewPet(
     enteredCriticalAt: null,
     careScore: 0,
     careQuality: 'normal',
+    careActionHistory: [],
     isAlive: true
   };
 }
